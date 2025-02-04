@@ -1,7 +1,7 @@
 ---
 - name: Automate Server Management Tasks
   hosts: all
-  become: yes
+  become: true
   vars:
     remote_log_path: "/var/log/syslog"
     local_log_path: "syslog"
