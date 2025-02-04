@@ -3,8 +3,8 @@
   hosts: all
   become: yes
   vars:
-    remote_log_path: "/var/log/syslog"
-    local_log_path: "./syslog"
+    remote_log_path: "/var/log"
+    local_log_path: "syslog"
     start_time: "2025-02-03 00:00:00"
     end_time: "2025-02-04 23:59:59"
     process_to_kill: "sleep"
