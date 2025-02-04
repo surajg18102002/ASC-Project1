@@ -1,0 +1,46 @@
+---
+- name: Automate Server Management Tasks
+  hosts: all
+  become: yes
+  vars:
+    remote_log_path: "/var/log/syslog"
+    local_log_path: "./syslog"
+    start_time: "2025-02-03 00:00:00"
+    end_time: "2025-02-04 23:59:59"
+    process_to_kill: "sleep"
+
+  tasks:
+    - name: Fetch log file from remote server
+      fetch:
+        src: "{{ remote_log_path }}"
+        dest: "{{ local_log_path }}"
+        flat: yes
+
+    - name: Scrape logs between specific timestamps
+      shell: |
+        awk '$0 >= "{{ start_time }}" && $0 <= "{{ end_time }}"' {{ local_log_path }}
+      register: scraped_logs
+
+    - name: Display scraped logs
+      debug:
+        msg: "{{ scraped_logs.stdout_lines }}"
+
+    - name: Check high memory and CPU usage
+      shell: "ps aux --sort=-%mem,-%cpu | head -5"
+      register: high_usage
+
+    - name: Display high memory and CPU usage
+      debug:
+        msg: "{{ high_usage.stdout }}"
+
+    - name: Check disk utilization
+      shell: "df -h"
+      register: disk_utilization
+
+    - name: Display disk utilization
+      debug:
+        msg: "{{ disk_utilization.stdout }}"
+
+    - name: Kill a specific process by name
+      shell: "pkill -f {{ process_to_kill }}"
+      ignore_errors: yes
