@@ -1,29 +1,47 @@
-- name: Automate Server Management Tasks
-  hosts: all
+---
+- name: Manage Linux Server Tasks
+  hosts: 10.112.0.11
   become: true
   vars:
     remote_log_path: "/var/log/syslog"
     local_log_path: "syslog"
+    retrieved_log_path: "retrieved_logs.txt"
     start_time: "2025-02-03 00:00:00"
     end_time: "2025-02-04 23:59:59"
     process_to_kill: "sleep"
 
   tasks:
+    - name: Fetch files from server
+      fetch:
+        src: "{{ remote_log_path }}"
+        dest: "./fetched_logs/"
+        flat: yes
 
-    - name: Check high memory and CPU usage
-      shell: "ps aux --sort=-%mem,-%cpu | head -5"
-      register: high_usage
+    - name: Scrap log file for specific duration
+      shell: "awk '$0 ~ /{{ start_time }}/,/{{ end_time }}/' {{ remote_log_path }}"
+      register: log_output
 
-    - name: Display high memory and CPU usage
+    - name: Save log output locally
+      copy:
+        content: "{{ log_output.stdout }}"
+        dest: "./retrieved_logs.txt"
+        
+    - name: Display scraped logs
       debug:
-        msg: "{{ high_usage.stdout }}"
+        msg: "{{ log_output.stdout_lines }}"
+        
+    - name: Check for high memory and CPU usage processes
+      shell: "ps aux --sort=-%mem,-%cpu | head -5"
+      register: process_output
+
+    - name: Display high resource-consuming processes
+      debug:
+        msg: "{{ process_output.stdout_lines }}"
 
     - name: Check disk utilization
       command: df -h
-      register: disk_utilization
+      register: disk_usage
 
-    - name: Display disk utilization
+    - name: Display disk usage
       debug:
-        msg: "{{ disk_utilization.stdout }}"
-
-   
+        msg: "{{ disk_usage.stdout_lines }}"
