@@ -34,10 +34,6 @@
       debug:
         msg: "{{ process_output.stdout_lines }}"
 
-    - name: Kill high CPU/memory-consuming process
-      shell: "pkill -f {{ process_to_kill }}"
-      ignore_errors: yes
-
     - name: Check disk utilization
       command: df -h
       register: disk_usage
