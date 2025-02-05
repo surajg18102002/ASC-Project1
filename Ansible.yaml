@@ -17,7 +17,7 @@
 
     - name: Scrape logs between specific timestamps
       shell: |
-        awk '$0 >= "{{ start_time }}" && $0 <= "{{ end_time }}"' {{ local_log_path }}/syslog
+        sed -n '/{{ start_time }}/,/{{ end_time }}/p' {{ local_log_path }}/{{ remote_log_path | basename }}
       register: scraped_logs
 
     - name: Display scraped logs
