@@ -25,7 +25,11 @@
       copy:
         content: "{{ log_output.stdout }}"
         dest: "./retrieved_logs.txt"
-
+        
+    - name: Display scraped logs
+      debug:
+        msg: "{{ log_output.stdout_lines }}"
+        
     - name: Check for high memory and CPU usage processes
       shell: "ps aux --sort=-%mem,-%cpu | head -5"
       register: process_output
