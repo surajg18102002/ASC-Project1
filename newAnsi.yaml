@@ -45,3 +45,8 @@
     - name: Display disk usage
       debug:
         msg: "{{ disk_usage.stdout_lines }}"
+        
+    - name: Show process kill result
+      debug:
+        msg: "Process {{ process_to_kill }} killed successfully."
+      when: kill_result.rc == 0    
