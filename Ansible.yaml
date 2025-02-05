@@ -26,20 +26,4 @@
       debug:
         msg: "{{ disk_utilization.stdout }}"
 
-    - name: Check if the process exists
-      shell: "pgrep -f {{ process_to_kill }}"
-      register: process_exists
-      ignore_errors: yes
-
-    - name: Display message if process doesn't exist
-      debug:
-        msg: "The process '{{ process_to_kill }}' doesn't exist. Continuing with the next tasks."
-      when: process_exists.rc != 0
-
-    - name: Kill the process if it exists
-      shell: "pkill -f {{ process_to_kill }}"
-      when: process_exists.rc == 0
-
-    - name: Confirm process has been handled
-      debug:
-        msg: "Process handling completed. Moving on to the next task."
+   
