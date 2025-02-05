@@ -5,7 +5,6 @@
   vars:
     remote_log_path: "{{remote_log_path}}"
     local_log_path: "{{local_log_path}}"
-    retrieved_log_path: "retrieved_logs.txt"
     start_time: "{{start_time}}"
     end_time: "{{end_time}}"
 
