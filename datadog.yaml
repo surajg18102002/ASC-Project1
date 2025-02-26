@@ -16,7 +16,7 @@
       impact: "2"
       urgency: "2"
 
-    recovery_window: 300  # 5 minutes in seconds
+    recovery_window: 3 # 5 minutes in seconds
 
   tasks:
 
@@ -32,7 +32,7 @@
 
     - name: Debug Datadog API Response
       debug:
-        var: datadog_alerts
+        var: datadog_alerts.json
 
     - name: Create ServiceNow case for each triggered alert
       ansible.builtin.uri:
@@ -47,8 +47,12 @@
         body:
           impact: "{{ service_now.impact }}"
           urgency: "{{ service_now.urgency }}"
-          short_description: "Datadog Alert - {{ item.monitor.name }}"
-          description: "Alert triggered in Datadog at {{ ansible_date_time.iso8601 }}"
+          short_description: "Datadog Alert - {{ item.name }}"
+          description: |
+            Alert triggered in Datadog at {{ ansible_date_time.iso8601 }}.
+            Monitor ID: {{ item.id }}
+            Query: {{ item.query }}
+            Message: {{ item.message }}
         status_code: [200, 201]
       loop: "{{ datadog_alerts.json }}"
       when: item.overall_state == "Alert"  # Use the correct field for alert status
@@ -80,7 +84,7 @@
         body_format: json
         body:
           state: "6"  # 6 corresponds to 'Resolved' in ServiceNow
-          short_description: "Datadog Alert - {{ item.monitor.name }} (Resolved)"
+          short_description: "Datadog Alert - {{ item.name }} (Resolved)"
           description: "The alert has recovered within the recovery window."
         status_code: [200, 201]
       loop: "{{ created_cases.results }}"
@@ -99,7 +103,7 @@
         body_format: json
         body:
           state: "2"  # 2 corresponds to 'In Progress' in ServiceNow
-          short_description: "Datadog Alert - {{ item.monitor.name }} (Incident Created)"
+          short_description: "Datadog Alert - {{ item.name }} (Incident Created)"
           description: "The alert is still active after the recovery window. Escalating to an incident."
         status_code: [200, 201]
       loop: "{{ created_cases.results }}"
