@@ -16,7 +16,7 @@
       urgency: "2"
  
     recovery_window: 300  # 5 minutes
-    processed_alerts: []  # List to store processed alert IDs
+    processed_alerts: {}  # Use a dictionary to track processed alerts
 
   tasks:
  
@@ -55,8 +55,19 @@
         item.overall_state in ["Alert", "OK"] and
         item.id not in processed_alerts
       register: created_cases
-      vars:
-        processed_alerts: "{{ processed_alerts + [item.id] }}"
+ 
+    - name: Update processed_alerts with new alert IDs
+      set_fact:
+        processed_alerts: >-
+          {{
+            processed_alerts | combine({
+              item.id: true
+            })
+          }}
+      loop: "{{ datadog_alerts.json }}"
+      when: >
+        item.overall_state in ["Alert", "OK"] and
+        item.id not in processed_alerts
  
     - name: Wait for recovery window (5 minutes)
       ansible.builtin.pause:
