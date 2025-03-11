@@ -1,35 +1,27 @@
-- name: Fetch Documents from Repositories
+- name: Fetch Document from Confluence
   hosts: localhost
   gather_facts: no
+  vars:
+    confluence_url: "https://surajg18102002.atlassian.net/wiki"
+    confluence_token: "c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMGxLM0ItRzNXUXVTZF9FeVVud29qTFFkNXVvUG5lVmJnLWlYWlM0NXBIUm9fcDNVZ2RSQXdKWF95ZkxZV1FfUUFjdEZpY3VTel9jMWt2ODVTQjhXaUFQVktQcmVRMElRUWhnbTV5Mkt2bGlTQTdWZV9YR1dpVUx6NTlMSE9SekRCczcwOUFTRUcxc2VLVXA5a1JDXzdTZ3Z4VDAxR3p3NFp4SFZHZWUxOTZEUT1GNzM3NDMwOQ=="
+    confluence_page_id: "98309"  # Extracted from your URL
+
   tasks:
-    - name: Fetch from SharePoint
+    - name: Fetch document from Confluence
       ansible.builtin.uri:
-        url: "https://{{ sharepoint_url }}/_api/web/lists/getbytitle('Documents')/items"
+        url: "{{ confluence_url }}/rest/api/content/{{ confluence_page_id }}?expand=body.storage"
         method: GET
         headers:
-          Authorization: "Bearer {{ sharepoint_token }}"
+          Authorization: "{{ confluence_token }}"
+          Accept: "application/json"
         return_content: yes
-      register: sharepoint_docs
+      register: confluence_doc
 
-    - name: Fetch from Confluence
-      ansible.builtin.uri:
-        url: "https://{{ confluence_url }}/rest/api/content"
-        method: GET
-        headers:
-          Authorization: "Basic {{ confluence_token }}"
-        return_content: yes
-      register: confluence_docs
-
-    - name: Fetch from Google Drive
-      ansible.builtin.uri:
-        url: "https://www.googleapis.com/drive/v3/files"
-        method: GET
-        headers:
-          Authorization: "Bearer {{ google_drive_token }}"
-        return_content: yes
-      register: google_docs
-
-    - name: Store extracted document metadata
+    - name: Save fetched Confluence document
       ansible.builtin.copy:
-        content: "{{ sharepoint_docs.content + confluence_docs.content + google_docs.content }}"
-        dest: "/tmp/documents.json"
+        content: "{{ confluence_doc.content }}"
+        dest: "/tmp/confluence_document_{{ confluence_page_id }}.json"
+
+    - name: Display fetched Confluence data
+      ansible.builtin.debug:
+        msg: "{{ confluence_doc.json }}"
