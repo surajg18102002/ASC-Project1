@@ -1,11 +1,11 @@
-- name: Scan Confluence Repository and Upload to KT_automation
+- name: Scan Confluence Repository and Upload to KT Automation
   hosts: localhost
   gather_facts: no
   vars:
     confluence_url: "https://surajg18102002.atlassian.net/wiki"
     confluence_token: "c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMGxLM0ItRzNXUXVTZF9FeVVud29qTFFkNXVvUG5lVmJnLWlYWlM0NXBIUm9fcDNVZ2RSQXdKWF95ZkxZV1FfUUFjdEZpY3VTel9jMWt2ODVTQjhXaUFQVktQcmVRMElRUWhnbTV5Mkt2bGlTQTdWZV9YR1dpVUx6NTlMSE9SekRCczcwOUFTRUcxc2VLVXA5a1JDXzdTZ3Z4VDAxR3p3NFp4SFZHZWUxOTZEUT1GNzM3NDMwOQ=="
     output_dir: "/tmp/confluence_repository"
-    new_space_key: "KT_AUTOMATION"
+    new_space_key: "KTAUTOMATION"  # FIXED (No underscores)
     new_space_name: "KT Automation"
 
   tasks:
@@ -15,36 +15,9 @@
         state: directory
         mode: '0755'
 
-    - name: Fetch all spaces from Confluence
+    - name: Check if KT Automation space exists
       ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space"
-        method: GET
-        headers:
-          Authorization: "Basic {{ confluence_token }}"
-          Accept: "application/json"
-        return_content: yes
-      register: confluence_spaces
-
-    - name: Extract and save pages from each space
-      ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/content?spaceKey={{ item.key }}&expand=body.storage"
-        method: GET
-        headers:
-          Authorization: "Basic {{ confluence_token }}"
-          Accept: "application/json"
-        return_content: yes
-      loop: "{{ confluence_spaces.json.results }}"
-      register: confluence_pages
-
-    - name: Save extracted Confluence pages as JSON files
-      ansible.builtin.copy:
-        content: "{{ item.content }}"
-        dest: "{{ output_dir }}/confluence_space_{{ item.item.key }}.json"
-      loop: "{{ confluence_pages.results }}"
-
-    - name: Check if KT_automation space exists
-      ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space/{{ new_space_key }}"
+        url: "{{ confluence_url }}/rest/api/space?spaceKey={{ new_space_key }}"
         method: GET
         headers:
           Authorization: "Basic {{ confluence_token }}"
@@ -52,7 +25,7 @@
         status_code: [200, 404]
       register: check_space
 
-    - name: Create KT_automation space if it does not exist
+    - name: Create KT Automation space if it does not exist
       ansible.builtin.uri:
         url: "{{ confluence_url }}/rest/api/space"
         method: POST
@@ -70,24 +43,3 @@
               representation: "plain"
         status_code: 200
       when: check_space.status == 404
-
-    - name: Upload extracted pages to KT_automation
-      ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/content"
-        method: POST
-        headers:
-          Authorization: "Basic {{ confluence_token }}"
-          Accept: "application/json"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          type: "page"
-          title: "Migrated - {{ item.item.title }}"
-          space:
-            key: "{{ new_space_key }}"
-          body:
-            storage:
-              value: "{{ item.content | to_json }}"
-              representation: "storage"
-        status_code: 200
-      loop: "{{ confluence_pages.results }}"
