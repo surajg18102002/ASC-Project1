@@ -1,0 +1,35 @@
+- name: Fetch Documents from Repositories
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Fetch from SharePoint
+      ansible.builtin.uri:
+        url: "https://{{ sharepoint_url }}/_api/web/lists/getbytitle('Documents')/items"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ sharepoint_token }}"
+        return_content: yes
+      register: sharepoint_docs
+
+    - name: Fetch from Confluence
+      ansible.builtin.uri:
+        url: "https://{{ confluence_url }}/rest/api/content"
+        method: GET
+        headers:
+          Authorization: "Basic {{ confluence_token }}"
+        return_content: yes
+      register: confluence_docs
+
+    - name: Fetch from Google Drive
+      ansible.builtin.uri:
+        url: "https://www.googleapis.com/drive/v3/files"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ google_drive_token }}"
+        return_content: yes
+      register: google_docs
+
+    - name: Store extracted document metadata
+      ansible.builtin.copy:
+        content: "{{ sharepoint_docs.content + confluence_docs.content + google_docs.content }}"
+        dest: "/tmp/documents.json"
