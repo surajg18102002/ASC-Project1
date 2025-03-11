@@ -27,19 +27,20 @@
 
     - name: Create KT Automation space if it does not exist
       ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space"
-        method: POST
-        headers:
-          Authorization: "Basic {{ confluence_token }}"
-          Accept: "application/json"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          key: "{{ new_space_key }}"
-          name: "{{ new_space_name }}"
-          description:
-            plain:
-              value: "Automated knowledge transfer space"
-              representation: "plain"
-        status_code: 200
-      when: check_space.status == 404
+    url: "{{ confluence_url }}/rest/api/space"
+    method: POST
+    headers:
+      Authorization: "Basic {{ confluence_token }}"
+      Accept: "application/json"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      key: "KTAUTOMATION"
+      name: "KT Automation"
+      description:
+        plain:
+          value: "Automated knowledge transfer space"
+          representation: "plain"
+    status_code: [200]
+  when: check_space.json.size == 0
+
