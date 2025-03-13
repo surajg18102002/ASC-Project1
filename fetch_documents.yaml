@@ -43,9 +43,12 @@
       when: item.id is defined
 
     - name: Store metadata in JSON file
-      copy:
-        content: "{{ {'spaces': spaces_data.json, 'pages': pages_data.results, 'attachments': attachments_data.results} | to_nice_json }}"
-        dest: "{{ metadata_file }}"
+  copy:
+    content: "{{ {'spaces': spaces_data.json.results | default([]), 
+                  'pages': pages_data.results | default([]), 
+                  'attachments': attachments_data.results | default([]) } | to_nice_json }}"
+    dest: "{{ metadata_file }}"
+
 
     - name: Check if KTSURAJ space exists
       ansible.builtin.uri:
