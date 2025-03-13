@@ -3,7 +3,8 @@
   gather_facts: no
   vars:
     confluence_url: "https://surajg18102002.atlassian.net/wiki"
-    confluence_token: "c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ=="  # Replace with actual token
+    confluence_token: "Basic c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ==
+"
     new_space_key: "KTsuraj12"
     new_space_name: "KTSuraj12"
     metadata_file: "/tmp/confluence_metadata.json"
@@ -38,7 +39,7 @@
           Authorization: "{{ confluence_token }}"
           Accept: "application/json"
         status_code: [200]
-      loop: "{{ pages_data.results | map(attribute='json.results') | flatten }}"
+      loop: "{{ pages_data.results | map(attribute='json.results') | list | flatten }}"
       register: attachments_data
       when: item.id is defined
 
@@ -49,7 +50,7 @@
 
     - name: Check if KTSURAJ space exists
       ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space?spaceKey={{ new_space_key }}"
+        url: "{{ confluence_url }}/rest/api/space/{{ new_space_key }}"
         method: GET
         headers:
           Authorization: "{{ confluence_token }}"
@@ -74,7 +75,7 @@
               value: "Automated knowledge transfer space for extracted documents"
               representation: "plain"
         status_code: [200, 201]
-      when: check_space.json.size == 0
+      when: check_space.status == 404
 
     - name: Upload metadata JSON to KTSURAJ space
       ansible.builtin.uri:
@@ -95,4 +96,3 @@
               value: "<pre>{{ lookup('file', metadata_file) }}</pre>"
               representation: "storage"
         status_code: [200, 201]
-
