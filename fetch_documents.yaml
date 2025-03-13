@@ -4,8 +4,8 @@
   vars:
     confluence_url: "https://surajg18102002.atlassian.net/wiki"
     confluence_token: "c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ=="  # Replace with actual token
-    new_space_key: "KTSURAJ"
-    new_space_name: "KT Suraj"
+    new_space_key: "KTsuraj12"
+    new_space_name: "KTSuraj12"
     metadata_file: "/tmp/confluence_metadata.json"
 
   tasks:
