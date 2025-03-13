@@ -1,58 +1,33 @@
-- name: Scan Confluence Repository and Upload to KTSURAJ
+- name: Scan Confluence Repository and Upload to KTAuto
   hosts: localhost
   gather_facts: no
   vars:
     confluence_url: "https://surajg18102002.atlassian.net/wiki"
-    confluence_token: "Basic c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ=="
-    new_space_key: "KTsuraj12"
-    new_space_name: "KTSuraj12"
+    confluence_token: "c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ=="
+    source_space_key: "SurajGowda"
+    destination_space_key: "KTAuto"
+    destination_space_name: "KTAuto"
     metadata_file: "/tmp/confluence_metadata.json"
 
   tasks:
-    - name: Fetch all spaces from Confluence
+    - name: Fetch all pages in the 'Suraj Gowda' space
       ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space?limit=100"
+        url: "{{ confluence_url }}/rest/api/space/{{ source_space_key }}/content?type=page&limit=100"
         method: GET
         headers:
           Authorization: "{{ confluence_token }}"
           Accept: "application/json"
         status_code: [200]
-      register: spaces_data
-
-    - name: Fetch all pages in each space
-      ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space/{{ item.key }}/content?type=page&limit=100"
-        method: GET
-        headers:
-          Authorization: "{{ confluence_token }}"
-          Accept: "application/json"
-        status_code: [200]
-      loop: "{{ spaces_data.json.results }}"
       register: pages_data
 
-    - name: Fetch attachments for each page
+    - name: Categorize documents into SOPs and Troubleshooting Guides
+      set_fact:
+        sop_docs: "{{ pages_data.json.results | selectattr('title', 'search', 'SOP') | list }}"
+        troubleshooting_docs: "{{ pages_data.json.results | selectattr('title', 'search', 'Troubleshooting') | list }}"
+
+    - name: Check if 'KTAuto' space exists
       ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/content/{{ item.id }}/child/attachment"
-        method: GET
-        headers:
-          Authorization: "{{ confluence_token }}"
-          Accept: "application/json"
-        status_code: [200]
-      loop: "{{ pages_data.results | map(attribute='json.results') | list | flatten }}"
-      register: attachments_data
-      when: item.id is defined
-
-    - name: Store metadata in JSON file
-  copy:
-    content: "{{ {'spaces': spaces_data.json.results | default([]), 
-                  'pages': pages_data.results | default([]), 
-                  'attachments': attachments_data.results | default([]) } | to_nice_json }}"
-    dest: "{{ metadata_file }}"
-
-
-    - name: Check if KTSURAJ space exists
-      ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space/{{ new_space_key }}"
+        url: "{{ confluence_url }}/rest/api/space?spaceKey={{ destination_space_key }}"
         method: GET
         headers:
           Authorization: "{{ confluence_token }}"
@@ -60,7 +35,7 @@
         status_code: [200, 404]
       register: check_space
 
-    - name: Create KTSURAJ space if it does not exist
+    - name: Create 'KTAuto' space if it does not exist
       ansible.builtin.uri:
         url: "{{ confluence_url }}/rest/api/space"
         method: POST
@@ -70,16 +45,16 @@
           Content-Type: "application/json"
         body_format: json
         body:
-          key: "{{ new_space_key }}"
-          name: "{{ new_space_name }}"
+          key: "{{ destination_space_key }}"
+          name: "{{ destination_space_name }}"
           description:
             plain:
-              value: "Automated knowledge transfer space for extracted documents"
+              value: "Automated knowledge transfer space for SOPs and Troubleshooting Guides"
               representation: "plain"
         status_code: [200, 201]
-      when: check_space.status == 404
+      when: check_space.json.size == 0
 
-    - name: Upload metadata JSON to KTSURAJ space
+    - name: Upload SOP documents to 'KTAuto' space
       ansible.builtin.uri:
         url: "{{ confluence_url }}/rest/api/content"
         method: POST
@@ -90,11 +65,50 @@
         body_format: json
         body:
           type: "page"
-          title: "Extracted Metadata"
+          title: "{{ item.title }}"
           space:
-            key: "{{ new_space_key }}"
+            key: "{{ destination_space_key }}"
           body:
             storage:
-              value: "<pre>{{ lookup('file', metadata_file) }}</pre>"
+              value: "<p>{{ item.body.storage.value }}</p>"
               representation: "storage"
         status_code: [200, 201]
+      loop: "{{ sop_docs }}"
+
+    - name: Upload Troubleshooting Guides to 'KTAuto' space
+      ansible.builtin.uri:
+        url: "{{ confluence_url }}/rest/api/content"
+        method: POST
+        headers:
+          Authorization: "{{ confluence_token }}"
+          Accept: "application/json"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          type: "page"
+          title: "{{ item.title }}"
+          space:
+            key: "{{ destination_space_key }}"
+          body:
+            storage:
+              value: "<p>{{ item.body.storage.value }}</p>"
+              representation: "storage"
+        status_code: [200, 201]
+      loop: "{{ troubleshooting_docs }}"
+
+    - name: Fetch attachments for each page
+      ansible.builtin.uri:
+        url: "{{ confluence_url }}/rest/api/content/{{ item.id }}/child/attachment"
+        method: GET
+        headers:
+          Authorization: "{{ confluence_token }}"
+          Accept: "application/json"
+        status_code: [200]
+      loop: "{{ pages_data.json.results }}"
+      register: attachments_data
+      when: item.id is defined
+
+    - name: Store metadata in JSON file
+      copy:
+        content: "{{ {'SOPs': sop_docs, 'Troubleshooting_Guides': troubleshooting_docs, 'attachments': attachments_data.results} | to_nice_json }}"
+        dest: "{{ metadata_file }}"
