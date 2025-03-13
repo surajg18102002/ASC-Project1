@@ -40,23 +40,24 @@
         var: check_space.json
 
     - name: Create 'KTAuto' space if it does not exist
-      ansible.builtin.uri:
-        url: "{{ confluence_url }}/rest/api/space"
-        method: POST
-        headers:
-          Authorization: "{{ confluence_token }}"
-          Accept: "application/json"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          key: "{{ destination_space_key }}"
-          name: "{{ destination_space_name }}"
-          description:
-            plain:
-              value: "Automated knowledge transfer space for SOPs and Troubleshooting Guides"
-              representation: "plain"
-        status_code: [200, 201]
-      when: check_space.json.size == 0
+  ansible.builtin.uri:
+    url: "{{ confluence_url }}/rest/api/space"
+    method: POST
+    headers:
+      Authorization: "{{ confluence_token }}"
+      Accept: "application/json"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      key: "{{ destination_space_key }}"
+      name: "{{ destination_space_name }}"
+      description:
+        plain:
+          value: "Automated knowledge transfer space for SOPs and Troubleshooting Guides"
+          representation: "plain"
+    status_code: [200, 201]
+  when: check_space.json.results | length == 0  # Updated condition
+
 
     - name: Upload SOP documents to 'KTAuto' space
       ansible.builtin.uri:
