@@ -1,16 +1,17 @@
 ---
-- name: Scan Confluence Repository and Upload to KTAuto
+- name: Automate Knowledge Transfer Document Processing
   hosts: localhost
   gather_facts: no
   vars:
     confluence_url: "https://surajg18102002.atlassian.net/wiki"
-    confluence_token: "Basic c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ=="
+    confluence_token: "MDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ=="
     source_space_key: "~7120205150328a89ad45d19d97b210d7049150"
-    destination_space_key: "KTAuto1"
-    destination_space_name: "KTAuto1 space"
+    destination_space_key: "KTAuto12"
+    destination_space_name: "KTAuto12 Space"
   
   tasks:
-    - name: Fetch all pages in the 'Suraj Gowda' space
+    # STEP 1: Scan Confluence for documents
+    - name: Fetch all pages from the source space
       ansible.builtin.uri:
         url: "{{ confluence_url }}/rest/api/content?spaceKey={{ source_space_key }}&type=page&limit=100"
         method: GET
@@ -18,38 +19,28 @@
           Authorization: "{{ confluence_token }}"
           Accept: "application/json"
         return_content: yes
-        status_code: [200, 401, 403]
       register: fetched_pages
 
-    - name: Debug API Response (Check if fetch is successful)
+    - name: Debug API Response
       debug:
         var: fetched_pages.json
-
-    - name: Fail if unauthorized
-      fail:
-        msg: "Authentication failed. Check API token."
-      when: fetched_pages.status == 401
 
     - name: Extract page titles and IDs
       set_fact:
         pages: "{{ fetched_pages.json.results | default([]) | map(attribute='id') | list }}"
 
-    - name: Check if 'KTAuto' space exists
+    # STEP 2: Check if the new space exists, create if not
+    - name: Check if the destination space exists
       ansible.builtin.uri:
         url: "{{ confluence_url }}/rest/api/space?spaceKey={{ destination_space_key }}"
         method: GET
         headers:
           Authorization: "{{ confluence_token }}"
           Accept: "application/json"
-        return_content: yes
         status_code: [200, 404]
       register: check_space
 
-    - name: Debug API Response (Check Space)
-      debug:
-        var: check_space.json
-
-    - name: Create 'KTAuto' space if it does not exist
+    - name: Create the destination space if it does not exist
       ansible.builtin.uri:
         url: "{{ confluence_url }}/rest/api/space"
         method: POST
@@ -63,22 +54,24 @@
           name: "{{ destination_space_name }}"
           description:
             plain:
-              value: "Automated knowledge transfer space for SOPs and Troubleshooting Guides"
+              value: "Automated Knowledge Transfer Space"
               representation: "plain"
         status_code: [200, 201]
       when: check_space.json is not defined or check_space.json.results | default([]) | length == 0
 
-    - name: Categorize documents into SOPs and Troubleshooting Guides
-      set_fact:
-        categorized_pages:
-          SOPs: "{{ pages | select('search', 'SOP') | list }}"
-          Troubleshooting_Guides: "{{ pages | select('search', 'Troubleshooting') | list }}"
+    # STEP 3: Process each page and categorize
+    - name: Process each document for NLP classification
+      ansible.builtin.command:
+        cmd: "python process_document.py {{ item }}"
+      loop: "{{ pages }}"
+      register: processed_docs
 
-    - name: Debug Categorized Pages
+    - name: Debug Processed Documents
       debug:
-        var: categorized_pages
+        var: processed_docs.results
 
-    - name: Upload categorized pages to 'KTAuto'
+    # STEP 4: Upload Processed Documents to New Space
+    - name: Upload categorized pages to new space
       ansible.builtin.uri:
         url: "{{ confluence_url }}/rest/api/content"
         method: POST
@@ -87,3 +80,21 @@
           Accept: "application/json"
           Content-Type: "application/json"
         body_format: json
+        body: >
+          {
+            "type": "page",
+            "title": "{{ item.stdout_lines[0] }}",
+            "space": {"key": "{{ destination_space_key }}"},
+            "body": {
+              "storage": {
+                "value": "{{ item.stdout_lines[1] }}",
+                "representation": "storage"
+              }
+            }
+          }
+      loop: "{{ processed_docs.results }}"
+      register: upload_result
+
+    - name: Debug Upload Results
+      debug:
+        var: upload_result
