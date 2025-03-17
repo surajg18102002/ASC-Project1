@@ -4,11 +4,10 @@
   gather_facts: no
   vars:
     confluence_url: "https://surajg18102002.atlassian.net/wiki"
-    confluence_token: "Basic c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ==
-"
+    confluence_token: "Basic c3VyYWpnMTgxMDIwMDJAZ21haWwuY29tOkFUQVRUM3hGZkdGMFBPcFZmaXVRNW5oUkFuM0pSSDhxQ0pCYnFZYnRkYlJMeVlNYjB6bEw4R0NiZXVuT01JMjdSREdaLUpuR19jbno0cG5qX05BRjdIcU9zUk9JSUdCclMyWWRHSU5CaDFEQ2c5Z2ZaVWJacVoyWnpURjY5azl4MjlWRHFaNGltUkJmTmg1ZTBIbWYzSV9NWDhCQmlQelVTRTBHQjJWaURldjFVZ2dxbHhBN3VsUT1GRThCN0VCRQ=="
     source_space_key: "~7120205150328a89ad45d19d97b210d7049150"
-    destination_space_key: "KTAuto"
-    destination_space_name: "KTAuto Space"
+    destination_space_key: "KTAuto1"
+    destination_space_name: "KTAuto1 space"
   
   tasks:
     - name: Fetch all pages in the 'Suraj Gowda' space
@@ -18,6 +17,7 @@
         headers:
           Authorization: "{{ confluence_token }}"
           Accept: "application/json"
+        return_content: yes
         status_code: [200, 401, 403]
       register: fetched_pages
 
@@ -41,6 +41,7 @@
         headers:
           Authorization: "{{ confluence_token }}"
           Accept: "application/json"
+        return_content: yes
         status_code: [200, 404]
       register: check_space
 
@@ -85,4 +86,4 @@
           Authorization: "{{ confluence_token }}"
           Accept: "application/json"
           Content-Type: "application/json"
-        body_format: j
+        body_format: json
