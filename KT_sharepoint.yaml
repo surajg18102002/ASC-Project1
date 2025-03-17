@@ -1,0 +1,71 @@
+- name: Fetch Documents from SharePoint
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    tenant_id: "<YOUR_TENANT_ID>"
+    client_id: "<YOUR_CLIENT_ID>"
+    client_secret: "<YOUR_CLIENT_SECRET>"
+    sharepoint_site: "<YOUR_SHAREPOINT_SITE_NAME>"  
+    sharepoint_drive: "Documents" 
+    download_path: "/tmp/sharepoint_docs/"  
+
+  tasks:
+    - name: Obtain Microsoft Graph API Access Token
+      uri:
+        url: "https://login.microsoftonline.com/{{ tenant_id }}/oauth2/v2.0/token"
+        method: POST
+        body:
+          grant_type: "client_credentials"
+          client_id: "{{ client_id }}"
+          client_secret: "{{ client_secret }}"
+          scope: "https://graph.microsoft.com/.default"
+        body_format: form-urlencoded
+        return_content: yes
+      register: auth_response
+
+    - name: Extract Access Token
+      set_fact:
+        access_token: "{{ auth_response.json.access_token }}"
+
+    - name: Fetch Document List from SharePoint
+      uri:
+        url: "https://graph.microsoft.com/v1.0/sites/{{ sharepoint_site }}/drives/{{ sharepoint_drive }}/root/children"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ access_token }}"
+          Accept: "application/json"
+        return_content: yes
+      register: document_list
+
+    - name: Debug Document List
+      debug:
+        var: document_list.json
+
+    - name: Ensure Download Directory Exists
+      file:
+        path: "{{ download_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download Each Document
+      uri:
+        url: "{{ item['@microsoft.graph.downloadUrl'] }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ access_token }}"
+        return_content: yes
+      loop: "{{ document_list.json.value }}"
+      when: "'@microsoft.graph.downloadUrl' in item"
+      register: downloaded_files
+
+    - name: Save Documents Locally
+      copy:
+        content: "{{ item.content }}"
+        dest: "{{ download_path }}/{{ item.item.name }}"
+      loop: "{{ downloaded_files.results }}"
+      when: item.status == 200
+
+    - name: Display Downloaded Files
+      debug:
+        msg: "Downloaded files: {{ lookup('fileglob', download_path + '*') }}"
