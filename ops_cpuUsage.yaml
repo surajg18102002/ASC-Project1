@@ -1,23 +1,26 @@
 ---
 - name: Check CPU Usage and Identify All Processes
-  hosts: all
+  hosts: 20.55.88.203
   become: yes
   tasks:
-    - name: Get CPU usage
-      shell: "top -b -n1 | grep 'Cpu(s)' | awk '{print $2 + $4}'"
-      register: cpu_usage
+    - name: Gather system performance facts
+      ansible.builtin.setup:
+        gather_subset:
+          - hardware
+      register: system_info
 
     - name: Show CPU usage
       debug:
-        msg: "Current CPU Usage: {{ cpu_usage.stdout }}%"
+        msg: "Current CPU Usage: {{ system_info.ansible_facts.ansible_processor_vcpus }} cores"
 
-    - name: Identify all processes by CPU usage
-      shell: >
-        ps -eo pid,comm,%cpu --sort=-%cpu --no-headers |
-        awk '{printf("{\"pid\":%s,\"command\":\"%s\",\"cpu\":%s}\n", $1, $2, $3)}' |
-        jq -s '.'
-      register: all_processes
+    - name: Get process details
+      ansible.builtin.command: "ps -eo pid,comm,%cpu --sort=-%cpu --no-headers"
+      register: process_info
+
+    - name: Convert process details to JSON
+      set_fact:
+        processes: "{{ process_info.stdout_lines | map('split', ' ') | list | map('regex_replace', '^(\\d+)\\s+(\\S+)\\s+([\\d\\.]+)$', '{\"pid\": \"\\1\", \"command\": \"\\2\", \"cpu\": \"\\3\"}') | list }}"
 
     - name: Show all processes in JSON format
       debug:
-        msg: "{{ all_processes.stdout }}"
+        msg: "{{ processes }}"
