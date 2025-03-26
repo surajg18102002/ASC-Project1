@@ -1,0 +1,20 @@
+---
+- name: Check CPU Usage and Identify All Processes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Get CPU usage
+      shell: "top -b -n1 | grep 'Cpu(s)' | awk '{print $2 + $4}'"
+      register: cpu_usage
+
+    - name: Show CPU usage
+      debug:
+        msg: "Current CPU Usage: {{ cpu_usage.stdout }}%"
+
+    - name: Identify all processes by CPU usage
+      shell: "ps -eo pid,comm,%cpu --sort=-%cpu --no-headers | awk '{print \"{\\"pid\\":\\"\" $1 \"\\",\\"command\\":\\"\" $2 \"\\",\\"cpu\\":\\"\" $3 \"\\"}\"}' | jq -s '.'"
+      register: all_processes
+
+    - name: Show all processes in JSON format
+      debug:
+        msg: "{{ all_processes.stdout }}"
