@@ -12,7 +12,10 @@
         msg: "Current CPU Usage: {{ cpu_usage.stdout }}%"
 
     - name: Identify all processes by CPU usage
-      shell: "ps -eo pid,comm,%cpu --sort=-%cpu --no-headers | awk '{print \"{\\"pid\\":\\"\" $1 \"\\",\\"command\\":\\"\" $2 \"\\",\\"cpu\\":\\"\" $3 \"\\"}\"}' | jq -s '.'"
+      shell: >
+        ps -eo pid,comm,%cpu --sort=-%cpu --no-headers |
+        awk '{printf("{\"pid\":%s,\"command\":\"%s\",\"cpu\":%s}\n", $1, $2, $3)}' |
+        jq -s '.'
       register: all_processes
 
     - name: Show all processes in JSON format
