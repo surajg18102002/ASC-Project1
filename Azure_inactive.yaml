@@ -14,7 +14,7 @@
       uri:
         url: "https://login.microsoftonline.com/{{ AZURE_TENANT_ID }}/oauth2/v2.0/token"
         method: POST
-        body: "AZURE_CLIENT_ID={{ AZURE_CLIENT_ID }}&scope=https://graph.microsoft.com/.default&client_secret={{  AZURE_CLIENT_SECRET }}&grant_type=client_credentials"
+        body: "client_id={{ AZURE_CLIENT_ID }}&scope=https://graph.microsoft.com/.default&client_secret={{ AZURE_CLIENT_SECRET }}&grant_type=client_credentials"
         headers:
           Content-Type: "application/x-www-form-urlencoded"
         return_content: yes
@@ -24,23 +24,24 @@
       set_fact:
         access_token: "{{ auth_response.json.access_token }}"
 
-    - name: Get all users from Azure AD
+    - name: Get all users with sign-in activity from Azure AD (Beta endpoint)
       uri:
-        url: "https://graph.microsoft.com/v1.0/users?$select=displayName,userPrincipalName,lastSignInDateTime,id"
+        url: "https://graph.microsoft.com/beta/users?$select=displayName,userPrincipalName,signInActivity"
         method: GET
         headers:
           Authorization: "Bearer {{ access_token }}"
         return_content: yes
       register: users_response
 
-    - name: Parse and filter inactive users
+    - name: Filter inactive users based on lastSignInDateTime
       set_fact:
         inactive_users: >-
           {{
-            users_response.json.value | selectattr('signInActivity.lastSignInDateTime', 'defined')
-            | selectattr('signInActivity.lastSignInDateTime', 'search', 'T')
-            | selectattr('signInActivity.lastSignInDateTime', 'match', '.*')
-            | selectattr('signInActivity.lastSignInDateTime', 'none') | list
+            users_response.json.value | selectattr('signInActivity.lastSignInDateTime', 'defined') | selectattr(
+              'signInActivity.lastSignInDateTime',
+              'search',
+              '^((?![0-9]{4}-[0-9]{2}-[0-9]{2}).)*$'
+            ) | list
           }}
 
     - name: Save results to JSON
