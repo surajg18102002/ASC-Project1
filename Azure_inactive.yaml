@@ -3,10 +3,10 @@
   hosts: localhost
   gather_facts: no
   vars:
-    tenant_id: "{{ lookup('env', 'AZURE_TENANT_ID') }}"
-    client_id: "{{ lookup('env', 'AZURE_CLIENT_ID') }}"
-    client_secret: "{{ lookup('env', 'AZURE_CLIENT_SECRET') }}"
-    days_inactive: 30
+    tenant_id: "{{ azure_tenant_id }}"
+    client_id: "{{ azure_client_id }}"
+    client_secret: "{{ azure_client_secret }}"
+    days_inactive: 10
     output_file: "/tmp/azure_ad_inactive_users.json"
 
   tasks:
