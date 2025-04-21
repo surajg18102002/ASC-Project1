@@ -3,18 +3,18 @@
   hosts: localhost
   gather_facts: no
   vars:
-    tenant_id: "{{ azure_tenant_id }}"
-    client_id: "{{ azure_client_id }}"
-    client_secret: "{{ azure_client_secret }}"
+    AZURE_TENANT_ID: "{{ azure_tenant_id }}"
+    AZURE_CLIENT_ID: "{{ azure_client_id }}"
+    AZURE_CLIENT_SECRET: "{{ azure_client_secret }}"
     days_inactive: 10
     output_file: "/tmp/azure_ad_inactive_users.json"
 
   tasks:
     - name: Get Azure AD Access Token
       uri:
-        url: "https://login.microsoftonline.com/{{ tenant_id }}/oauth2/v2.0/token"
+        url: "https://login.microsoftonline.com/{{ AZURE_TENANT_ID }}/oauth2/v2.0/token"
         method: POST
-        body: "client_id={{ client_id }}&scope=https://graph.microsoft.com/.default&client_secret={{ client_secret }}&grant_type=client_credentials"
+        body: "AZURE_CLIENT_ID={{ AZURE_CLIENT_ID }}&scope=https://graph.microsoft.com/.default&client_secret={{  AZURE_CLIENT_SECRET }}&grant_type=client_credentials"
         headers:
           Content-Type: "application/x-www-form-urlencoded"
         return_content: yes
