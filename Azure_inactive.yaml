@@ -1,0 +1,49 @@
+---
+- name: Detect and Report Inactive Azure AD Users
+  hosts: localhost
+  gather_facts: no
+  vars:
+    tenant_id: "{{ lookup('env', 'AZURE_TENANT_ID') }}"
+    client_id: "{{ lookup('env', 'AZURE_CLIENT_ID') }}"
+    client_secret: "{{ lookup('env', 'AZURE_CLIENT_SECRET') }}"
+    days_inactive: 30
+    output_file: "/tmp/azure_ad_inactive_users.json"
+
+  tasks:
+    - name: Get Azure AD Access Token
+      uri:
+        url: "https://login.microsoftonline.com/{{ tenant_id }}/oauth2/v2.0/token"
+        method: POST
+        body: "client_id={{ client_id }}&scope=https://graph.microsoft.com/.default&client_secret={{ client_secret }}&grant_type=client_credentials"
+        headers:
+          Content-Type: "application/x-www-form-urlencoded"
+        return_content: yes
+      register: auth_response
+
+    - name: Set access token
+      set_fact:
+        access_token: "{{ auth_response.json.access_token }}"
+
+    - name: Get all users from Azure AD
+      uri:
+        url: "https://graph.microsoft.com/v1.0/users?$select=displayName,userPrincipalName,lastSignInDateTime,id"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ access_token }}"
+        return_content: yes
+      register: users_response
+
+    - name: Parse and filter inactive users
+      set_fact:
+        inactive_users: >-
+          {{
+            users_response.json.value | selectattr('signInActivity.lastSignInDateTime', 'defined')
+            | selectattr('signInActivity.lastSignInDateTime', 'search', 'T')
+            | selectattr('signInActivity.lastSignInDateTime', 'match', '.*')
+            | selectattr('signInActivity.lastSignInDateTime', 'none') | list
+          }}
+
+    - name: Save results to JSON
+      copy:
+        dest: "{{ output_file }}"
+        content: "{{ inactive_users | to_nice_json }}"
